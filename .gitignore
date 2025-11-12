@@ -205,3 +205,13 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Environment variables
+.env
+.env.local
+
+# Local output artifacts
+artifacts/figures/*.csv
+artifacts/figures/*.png
+artifacts/screenshots/*.png
+artifacts/docs/interview_narratives_combined.pdf
