@@ -1,104 +1,180 @@
-# gm-interview-capstone
+# 🧠 GM Interview Capstone
 
-Detection engineering + portfolio artifacts (Elastic). Includes:
-- Two validated detections with rule exports and playbooks
-- Evidence screenshots
-- A CVE prioritization script (EPSS + KEV + CVSS) with chart output
-- Interview narratives/briefs
+Detection Engineering + Portfolio Artifacts (Elastic)
 
-## Contents
+This repository contains the end-to-end portfolio artifacts built for the **WGU Cybersecurity Master’s Capstone** and professional interviews.
+It includes validated Elastic detections, playbooks, rule exports, a CVE risk prioritization engine, and supporting documentation.
 
+---
+
+## 📂 Repository Structure
+
+```
 gm-interview-capstone/
-├─ README.md ← you are here
+├─ README.md                        ← this file
 ├─ artifacts/
-│ ├─ playbooks/
-│ │ ├─ powershell_flags_eql.md
-│ │ └─ failed_logon_burst_4625.md
-│ ├─ elastic/
-│ │ └─ rules/
-│ │ ├─ powershell_eql_rule_export.ndjson
-│ │ ├─ failed_logon_4625_rule_export.ndjson
-│ │ └─ README.md
-│ ├─ screenshots/ ← numbered PNGs used by playbooks
-│ └─ docs/
-│ └─ interview_narratives_combined.pdf
-├─ rules/ ← optional mirror of rule exports
-│ ├─ powershell_eql_rule_export.ndjson
-│ └─ failed_logon_4625_rule_export.ndjson
+│  ├─ playbooks/
+│  │  ├─ powershell_flags_eql.md
+│  │  └─ failed_logon_burst_4625.md
+│  ├─ elastic/
+│  │  └─ rules/
+│  │     ├─ powershell_eql_rule_export.ndjson
+│  │     ├─ failed_logon_4625_rule_export.ndjson
+│  │     └─ README.md
+│  ├─ screenshots/                  ← numbered evidence used in playbooks
+│  └─ docs/
+│     ├─ interview_onepager.md
+│     └─ interview_narratives_combined.pdf
+├─ rules/
+│  ├─ powershell_eql_rule_export.ndjson
+│  └─ failed_logon_4625_rule_export.ndjson
 └─ artifacts/scripts/
-├─ cve_prioritizer.py
-└─ README.md
+   ├─ cve_prioritizer.py
+   └─ README.md
+```
 
-## Reproduce the detections
+---
 
-**Import rules in Elastic Security**  
-Security → Rules → Manage rules → *Export/Import* → Import the `.ndjson` in `artifacts/elastic/rules/`.
+## ⚙️ Environment & Tools
 
-**Run the rules**  
-Ensure your Windows + System integrations are active and ingesting:
-- PowerShell Operational, PowerShell
-- System/Security (4625 failures)
+**Platform:** Elastic Security (Fleet-Managed Endpoint)
+**Integrations:** Windows + System
+**Language:** Python 3.11+
+**Libraries:** `requests`, `pandas`, `matplotlib`, `python-dotenv`
 
-Use the playbooks in `artifacts/playbooks/` for generation steps, Discover KQL, and expected alert screenshots.
+---
 
-## CVE Prioritizer
+## 🚨 Detections Overview
 
-- Script: `artifacts/scripts/cve_prioritizer.py`  
-- Output: `artifacts/figures/priority.csv` + `priority_chart.png`  
+### 1️⃣ Suspicious PowerShell Flags — *MITRE ATT&CK T1059.001*
 
-Usage (PowerShell):
+**Signal:** PowerShell processes containing `-enc`, `-nop`, `-NoProfile`, or `-w hidden`
+**Why it matters:** Indicates script obfuscation or LOLBAS execution
+**Artifacts:**
+
+* `artifacts/playbooks/powershell_flags_eql.md`
+* `artifacts/elastic/rules/powershell_eql_rule_export.ndjson`
+* Screenshots: `artifacts/screenshots/` (10–18)
+
+### 2️⃣ Failed Logon Burst (Event ID 4625)
+
+**Signal:** Multiple failed logon attempts in a short window
+**Why it matters:** Early brute-force or spray attempt indicator
+**Artifacts:**
+
+* `artifacts/playbooks/failed_logon_burst_4625.md`
+* `artifacts/elastic/rules/failed_logon_4625_rule_export.ndjson`
+* Screenshots: `artifacts/screenshots/` (19–23)
+
+---
+
+## 📊 CVE Prioritization Engine
+
+**Script:** [`artifacts/scripts/cve_prioritizer.py`](artifacts/scripts/cve_prioritizer.py)
+**Purpose:** Merge EPSS, CISA KEV, and NVD CVSS into a unified prioritization model for patch management.
+**Output:**
+
+* `artifacts/figures/priority.csv`
+* `artifacts/figures/priority_chart.png`
+
+**Balanced scoring model:**
+
+```python
+df["Priority"] = (df["KEV"] * 40) + (df["EPSS"] * 50) + (df["CVSS"] * 10)
+```
+
+**Usage:**
 
 ```powershell
-cd C:\gm-interview-capstone\artifacts\scripts
+cd artifacts\scripts
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install requests pandas matplotlib
+pip install requests pandas matplotlib python-dotenv
 python .\cve_prioritizer.py
-Rule exports
-See artifacts/elastic/rules/README.md for one-click re-import instructions.
+```
 
-Notes
-No secrets are committed. If you add a .env, keep it out of Git.
+Outputs are automatically written to `artifacts\figures\`.
 
-Screenshots are numbered to match the playbooks’ Evidence sections.
+---
 
-sql
-Copy code
+## 📘 Reproducing the Detections in Elastic
 
-Commit it:
+1. **Import rules:**
 
-```powershell
-git add README.md
-git commit -m "Add top-level README with structure and instructions"
-git push
-3) Interview one-pager (paste this, optional but helpful)
-Create C:\gm-interview-capstone\artifacts\docs\interview_onepager.md:
+   * Kibana → Security → Rules → Manage rules → Import
+   * Select `.ndjson` files from `artifacts/elastic/rules/`
 
-markdown
-Copy code
-# Detection Engineering One-Pager
+2. **Validate telemetry:**
 
-**Environment:** Elastic Security (Fleet-managed Endpoint), Windows + System integrations
+   * Confirm `Windows` and `System` integrations are active
+   * Verify data streams for:
 
-## Detection 1 — Suspicious PowerShell Flags (T1059.001)
-- **Signal:** PowerShell with `-enc`, `-nop`, `-NoProfile`, or `-w hidden`
-- **Why it matters:** Common in obfuscated/LOLBAS tradecraft
-- **Validation:** Generated events, verified in Discover, rule fired; alert triage captured
-- **Artifacts:** Rule export NDJSON, playbook, numbered screenshots
+     * `windows.powershell`
+     * `windows.powershell_operational`
+     * `system.security`
 
-## Detection 2 — Repeated Failed Logons (4625 Burst)
-- **Signal:** Multiple `4625` in short window per host/user
-- **Why it matters:** Spray/guessing; early brute-force indicator
-- **Validation:** Enabled System/Security stream → generated interactive/`runas` failures → rule fired
-- **Artifacts:** Rule export NDJSON, playbook, numbered screenshots
+3. **Trigger events:**
 
-## Enrichment/Analytics — CVE Prioritizer
-- **Inputs:** NVD (last 30d), CISA KEV, EPSS
-- **Logic:** Balanced score (KEV, exploit likelihood, severity), chart for comms
-- **Outcome:** CSV + visualization for backlog slicing
+   * Run PowerShell with suspicious flags
+   * Generate failed logons via `runas /user:wronguser` or switch-user screen
 
-## What I’d do next in a SOC
-- Promote rules to prod policy with suppression/tuning
-- Add exceptions for known admin tasks
-- Add dashboards for 4625 + MFA correlation
-- Wire rule action → case mgmt/webhook
+4. **Confirm alerts:**
+
+   * Check Discover and Security → Alerts
+   * Capture screenshots as numbered in each playbook
+
+---
+
+## 🧩 Rule Export Reference
+
+**Folder:** `artifacts/elastic/rules/`
+Contains the exported `.ndjson` files for reproducibility and “detections-as-code.”
+These can be imported directly into any Elastic Security environment.
+
+Each rule file is accompanied by a short `README.md` explaining import steps.
+
+---
+
+## 🔐 Environment Variables (for CVE Script)
+
+Create a `.env` file at the repo root:
+
+```bash
+# NVD API Configuration
+NVD_API_KEY=your-actual-api-key-here
+```
+
+`.env` is already ignored via `.gitignore`.
+For collaborators, include `.env.example` without secrets.
+
+---
+
+## 💼 Interview One-Pager Summary
+
+| Detection                   | MITRE ID  | Category          | Purpose                                        |
+| --------------------------- | --------- | ----------------- | ---------------------------------------------- |
+| Suspicious PowerShell Flags | T1059.001 | Execution         | Detects encoded/obfuscated PowerShell          |
+| Failed Logon Burst          | T1110     | Credential Access | Detects brute-force or password spray attempts |
+| CVE Prioritizer             | N/A       | Analytics         | Quantifies CVE risk via EPSS + KEV + CVSS      |
+
+**See:** [`artifacts/docs/interview_onepager.md`](artifacts/docs/interview_onepager.md)
+
+---
+
+## 🗾 License
+
+This project is released under the [MIT License](LICENSE).
+
+---
+
+## ✉️ Contact
+
+**Author:** Gabriel Marquez
+**LinkedIn:** [linkedin.com/in/gabrielmarquezcyber](https://linkedin.com/in/gabrielmarquezcyber)
+**GitHub:** [github.com/gabrielmarquezcyber](https://github.com/gabrielmarquezcyber)
+
+---
+
+```
+📘 Tip: Reviewers can reproduce all detections, rule imports, and prioritization outputs from this README alone.
+```
