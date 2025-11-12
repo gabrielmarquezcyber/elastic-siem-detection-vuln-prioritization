@@ -1,36 +1,12 @@
-# --- Secrets / env ---
+﻿**/.venv/
+venv/
 .env
-.env.local
-.env.*
-!.env.example
-
-# --- Python ---
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
 *.egg-info/
-.venv/
-artifacts/scripts/.venv/
-
-# --- Editors / OS ---
-.vscode/
+.pytest_cache/
+.mypy_cache/
 .DS_Store
-Thumbs.db
-
-# --- Notebooks / Misc cache ---
+dist/
+build/
 .ipynb_checkpoints/
-.cache/
-tmp/
-temp/
-
-# --- Logs ---
-*.log
-
-# NOTE:
-# We intentionally DO NOT ignore:
-# - artifacts/figures/priority.csv
-# - artifacts/figures/priority_chart.png
-# - artifacts/elastic/rules/*.ndjson
-# - artifacts/playbooks/*.md / .pdf
-# so they remain tracked for the portfolio.
