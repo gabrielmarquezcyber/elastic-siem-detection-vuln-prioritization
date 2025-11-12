@@ -10,3 +10,4 @@ __pycache__/
 dist/
 build/
 .ipynb_checkpoints/
+node_modules/
