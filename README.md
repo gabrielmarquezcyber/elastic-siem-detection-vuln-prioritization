@@ -16,18 +16,14 @@ gm-interview-capstone/
 │  ├─ playbooks/
 │  │  ├─ powershell_flags_eql.md
 │  │  └─ failed_logon_burst_4625.md
-│  ├─ elastic/
-│  │  └─ rules/
-│  │     ├─ powershell_eql_rule_export.ndjson
-│  │     ├─ failed_logon_4625_rule_export.ndjson
-│  │     └─ README.md
 │  ├─ screenshots/                  ← numbered evidence used in playbooks
 │  └─ docs/
 │     ├─ interview_onepager.md
 │     └─ interview_narratives_combined.pdf
 ├─ rules/
 │  ├─ powershell_eql_rule_export.ndjson
-│  └─ failed_logon_4625_rule_export.ndjson
+│  ├─ failed_logon_4625_rule_export.ndjson
+|  └─ README.md
 └─ artifacts/scripts/
    ├─ cve_prioritizer.py
    └─ README.md
@@ -146,18 +142,6 @@ NVD_API_KEY=your-actual-api-key-here
 
 `.env` is already ignored via `.gitignore`.
 For collaborators, include `.env.example` without secrets.
-
----
-
-## 💼 Interview One-Pager Summary
-
-| Detection                   | MITRE ID  | Category          | Purpose                                        |
-| --------------------------- | --------- | ----------------- | ---------------------------------------------- |
-| Suspicious PowerShell Flags | T1059.001 | Execution         | Detects encoded/obfuscated PowerShell          |
-| Failed Logon Burst          | T1110     | Credential Access | Detects brute-force or password spray attempts |
-| CVE Prioritizer             | N/A       | Analytics         | Quantifies CVE risk via EPSS + KEV + CVSS      |
-
-**See:** [`artifacts/docs/interview_onepager.md`](artifacts/docs/interview_onepager.md)
 
 ---
 
