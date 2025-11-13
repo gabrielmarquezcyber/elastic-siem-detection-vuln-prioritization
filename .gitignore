@@ -11,3 +11,5 @@ dist/
 build/
 .ipynb_checkpoints/
 node_modules/
+# Personal / local-only materials
+interview_materials/
