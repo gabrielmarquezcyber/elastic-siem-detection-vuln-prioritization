@@ -1,180 +1,219 @@
-# 🧠 GM Interview Capstone
+# 🧠 gm-interview-capstone  
+**Detection Engineering & Vulnerability Risk Portfolio (Elastic + Python)**  
 
-Detection Engineering + Portfolio Artifacts (Elastic)
+Author: **Gabriel Marquez**  
+GitHub: [github.com/gabrielmarquezcyber](https://github.com/gabrielmarquezcyber)  
+LinkedIn: [linkedin.com/in/gabrielmarquezcyber](https://linkedin.com/in/gabrielmarquezcyber)
 
-This repository contains the end-to-end portfolio artifacts built for the **WGU Cybersecurity Master’s Capstone** and professional interviews.
-It includes validated Elastic detections, playbooks, rule exports, a CVE risk prioritization engine, and supporting documentation.
+This repository showcases **end-to-end detection engineering** and **vulnerability risk automation** work, built and validated in a real Elastic lab.
+
+It is intentionally small and focused so an interviewer can quickly see **how I think, what I build, and how I validate it**—not just that I can follow a lab.
 
 ---
 
-## 📂 Repository Structure
+## 📂 Repository Overview
 
-```
+```text
 gm-interview-capstone/
-├─ README.md                        ← this file
+├─ README.md                     ← this file
 ├─ artifacts/
-│  ├─ playbooks/
-│  │  ├─ powershell_flags_eql.md
-│  │  └─ failed_logon_burst_4625.md
-│  ├─ elastic/
-│  │  └─ rules/
-│  │     ├─ powershell_eql_rule_export.ndjson
-│  │     ├─ failed_logon_4625_rule_export.ndjson
-│  │     └─ README.md
-│  ├─ screenshots/                  ← numbered evidence used in playbooks
-│  └─ docs/
-│     ├─ interview_onepager.md
-│     └─ interview_narratives_combined.pdf
-├─ rules/
-│  ├─ powershell_eql_rule_export.ndjson
-│  └─ failed_logon_4625_rule_export.ndjson
-└─ artifacts/scripts/
-   ├─ cve_prioritizer.py
-   └─ README.md
+│  ├─ playbooks/                 ← human-readable detection runbooks
+│  │   ├─ playbook_powershell_eql.md
+│  │   ├─ playbook_powershell_eql.pdf
+│  │   ├─ playbook_failed_logon_burst_4625.md
+│  │   └─ playbook_failed_logon_burst_4625.pdf
+│  ├─ playbooks/Old/             ← earlier drafts, kept for history
+│  ├─ screenshots/               ← numbered evidence used in playbooks
+│  ├─ docs/
+│  │   └─ CVE_Prioritization_Automation_OnePager.pdf
+│  ├─ figures/
+│  │   ├─ priority.csv
+│  │   └─ priority_chart.png
+│  └─ scripts/
+│      ├─ cve_prioritizer.py
+│      ├─ README_CVE_Prioritizer.md
+│      ├─ requirements-extra.txt
+│      └─ cve_prioritizer.old.txt
+├─ rules/                        ← Elastic rule exports (detections-as-code)
+│  ├─ Suspicious_PowerShell_Flags_EQL.ndjson
+│  ├─ failed_logon_burst.ndjson
+│  └─ README.md
+└─ .env.example                  ← sample config for NVD API key
 ```
 
----
+**Primary artifacts:**
 
-## ⚙️ Environment & Tools
-
-**Platform:** Elastic Security (Fleet-Managed Endpoint)
-**Integrations:** Windows + System
-**Language:** Python 3.11+
-**Libraries:** `requests`, `pandas`, `matplotlib`, `python-dotenv`
+- Two validated Elastic detections + playbooks  
+- A CVE risk prioritization engine (EPSS + CISA KEV + NVD)  
+- Evidence (screenshots, charts, one-pagers) showing how these would run in a real environment  
 
 ---
 
-## 🚨 Detections Overview
+## 🚨 Detection Engineering (Elastic)
 
-### 1️⃣ Suspicious PowerShell Flags — *MITRE ATT&CK T1059.001*
+### 1️⃣ Suspicious PowerShell Flags (EQL) — MITRE ATT&CK T1059.001
 
-**Signal:** PowerShell processes containing `-enc`, `-nop`, `-NoProfile`, or `-w hidden`
-**Why it matters:** Indicates script obfuscation or LOLBAS execution
-**Artifacts:**
+**Goal:** Detect potentially obfuscated or headless PowerShell commonly used in attacks (e.g., `-EncodedCommand`, `-nop`, `-NoProfile`).  
 
-* `artifacts/playbooks/powershell_flags_eql.md`
-* `artifacts/elastic/rules/powershell_eql_rule_export.ndjson`
-* Screenshots: `artifacts/screenshots/` (10–18)
+**Data sources**  
+- Elastic Defend endpoint telemetry  
+- Indices: `logs-*`, `endpoint.events.*`  
 
-### 2️⃣ Failed Logon Burst (Event ID 4625)
+**Core EQL logic (simplified):**
 
-**Signal:** Multiple failed logon attempts in a short window
-**Why it matters:** Early brute-force or spray attempt indicator
-**Artifacts:**
+```eql
+process
+  where process.name : ("powershell.exe", "pwsh.exe")
+    and (
+      process.command_line : "*-enc*" or
+      process.command_line : "*-EncodedCommand*" or
+      process.command_line : "*-NoProfile*" or
+      process.command_line : "*-nop*"
+    )
+```
 
-* `artifacts/playbooks/failed_logon_burst_4625.md`
-* `artifacts/elastic/rules/failed_logon_4625_rule_export.ndjson`
-* Screenshots: `artifacts/screenshots/` (19–23)
+**Artifacts**  
+
+- Playbook: `artifacts/playbooks/playbook_powershell_eql.md`  
+- Rule export: `rules/Suspicious_PowerShell_Flags_EQL.ndjson`  
+- Evidence screenshots: `artifacts/screenshots/` (14–18 in my local numbering)  
+
+**What it demonstrates**  
+
+- Practical, ATT&CK-mapped detection for a very common attacker technique  
+- End-to-end validation: manual simulations, Discover queries, and alert verification  
+- A clear triage/response flow documented in the playbook  
 
 ---
 
-## 📊 CVE Prioritization Engine
+### 2️⃣ Failed Logon Burst (Windows Event ID 4625) — MITRE ATT&CK T1110 (Brute Force)
 
-**Script:** [`artifacts/scripts/cve_prioritizer.py`](artifacts/scripts/cve_prioritizer.py)
-**Purpose:** Merge EPSS, CISA KEV, and NVD CVSS into a unified prioritization model for patch management.
-**Output:**
+**Goal:** Detect bursts of failed Windows logons that may indicate password spraying or brute force.  
 
-* `artifacts/figures/priority.csv`
-* `artifacts/figures/priority_chart.png`
+**Data sources**  
 
-**Balanced scoring model:**
+- Windows Security logs via Elastic System integration  
+- Data stream: `system.security` (indices `logs-*`)  
+
+**Base KQL filter:**
+
+```kql
+data_stream.dataset: "system.security"
+and winlog.event_id: 4625
+```
+
+The rule is implemented as a **threshold rule** (for example: ≥ 10 events per `user.name` or `host.name` in 10 minutes).
+
+**Artifacts**  
+
+- Playbook: `artifacts/playbooks/playbook_failed_logon_burst_4625.md`  
+- Rule export: `rules/failed_logon_burst.ndjson`  
+- Evidence screenshots: `artifacts/screenshots/` (19–22 in my local numbering)  
+
+**What it demonstrates**  
+
+- Threshold-based brute force detection mapped to ATT&CK T1110  
+- Telemetry enablement and validation steps in Elastic  
+- Tuning and response considerations for noisy environments  
+
+---
+
+## 📊 CVE Prioritization Automation (EPSS + KEV + CVSS)
+
+**Script:** `artifacts/scripts/cve_prioritizer.py`  
+**Docs:** `artifacts/scripts/README_CVE_Prioritizer.md`, `artifacts/docs/CVE_Prioritization_Automation_OnePager.pdf`  
+
+**Purpose:**  
+Ingest public vulnerability intelligence (NVD, CISA KEV, EPSS), normalize it, and produce a ranked list of CVEs suitable for vulnerability management and detection engineering.
+
+**Data sources**  
+
+- EPSS: `https://epss.cyentia.com/epss_scores-current.csv.gz`  
+- CISA KEV: `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json`  
+- NVD CVEs: NVD 2.0 API for a configurable lookback window (e.g., last 30 days)  
+
+**Scoring model (example):**
 
 ```python
 df["Priority"] = (df["KEV"] * 40) + (df["EPSS"] * 50) + (df["CVSS"] * 10)
 ```
 
-**Usage:**
+**Outputs**  
+
+- Ranked CSV: `artifacts/figures/priority.csv`  
+- Chart: `artifacts/figures/priority_chart.png` (top KEV vs non‑KEV CVEs)  
+
+**Local usage (Windows example):**
 
 ```powershell
 cd artifacts\scripts
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install requests pandas matplotlib python-dotenv
+pip install -r requirements-extra.txt
 python .\cve_prioritizer.py
 ```
 
-Outputs are automatically written to `artifacts\figures\`.
+You can optionally set an `NVD_API_KEY` in a `.env` file at the repo root to avoid rate limits.
+
+In a real environment, this script would be integrated with an **asset inventory** so that prioritization focuses on CVEs affecting critical systems, not just “highest scores.”
 
 ---
 
-## 📘 Reproducing the Detections in Elastic
+## 🧪 Reproducing the Elastic Detections
 
-1. **Import rules:**
+**1. Import rules**  
 
-   * Kibana → Security → Rules → Manage rules → Import
-   * Select `.ndjson` files from `artifacts/elastic/rules/`
+1. In Kibana, go to **Security → Rules → Import**.  
+2. Select the appropriate `.ndjson` file from the `rules/` folder.  
+3. Review index patterns, schedule, and severity, then enable the rule.
 
-2. **Validate telemetry:**
+**2. Validate telemetry**  
 
-   * Confirm `Windows` and `System` integrations are active
-   * Verify data streams for:
+- Confirm Windows/System and Elastic Defend integrations are active.  
+- In **Discover**, validate that data is present:  
+  - PowerShell: `process.name : "powershell.exe"` with command‑line flags.  
+  - 4625 events: `data_stream.dataset:"system.security" AND winlog.event_id:4625`.
 
-     * `windows.powershell`
-     * `windows.powershell_operational`
-     * `system.security`
+**3. Generate test events**  
 
-3. **Trigger events:**
+_PowerShell (encoded/headless examples):_
 
-   * Run PowerShell with suspicious flags
-   * Generate failed logons via `runas /user:wronguser` or switch-user screen
-
-4. **Confirm alerts:**
-
-   * Check Discover and Security → Alerts
-   * Capture screenshots as numbered in each playbook
-
----
-
-## 🧩 Rule Export Reference
-
-**Folder:** `artifacts/elastic/rules/`
-Contains the exported `.ndjson` files for reproducibility and “detections-as-code.”
-These can be imported directly into any Elastic Security environment.
-
-Each rule file is accompanied by a short `README.md` explaining import steps.
-
----
-
-## 🔐 Environment Variables (for CVE Script)
-
-Create a `.env` file at the repo root:
-
-```bash
-# NVD API Configuration
-NVD_API_KEY=your-actual-api-key-here
+```powershell
+powershell.exe -NoProfile -EncodedCommand VwByAGkAdABlAC0ATwB1AHQAcAB1AHQAIAB0AGUAcwB0AA==
+powershell.exe -NoProfile -nop -Command "Write-Output test"
 ```
 
-`.env` is already ignored via `.gitignore`.
-For collaborators, include `.env.example` without secrets.
+_Failed logons:_
 
----
+- Intentionally log on with a wrong password at the Windows logon screen.  
+- Or use:
 
-## 💼 Interview One-Pager Summary
-
-| Detection                   | MITRE ID  | Category          | Purpose                                        |
-| --------------------------- | --------- | ----------------- | ---------------------------------------------- |
-| Suspicious PowerShell Flags | T1059.001 | Execution         | Detects encoded/obfuscated PowerShell          |
-| Failed Logon Burst          | T1110     | Credential Access | Detects brute-force or password spray attempts |
-| CVE Prioritizer             | N/A       | Analytics         | Quantifies CVE risk via EPSS + KEV + CVSS      |
-
-**See:** [`artifacts/docs/interview_onepager.md`](artifacts/docs/interview_onepager.md)
-
----
-
-## 🗾 License
-
-This project is released under the [MIT License](LICENSE).
-
----
-
-## ✉️ Contact
-
-**Author:** Gabriel Marquez
-**LinkedIn:** [linkedin.com/in/gabrielmarquezcyber](https://linkedin.com/in/gabrielmarquezcyber)
-**GitHub:** [github.com/gabrielmarquezcyber](https://github.com/gabrielmarquezcyber)
-
----
-
+```powershell
+runas.exe /user:.\WrongUser cmd
 ```
-📘 Tip: Reviewers can reproduce all detections, rule imports, and prioritization outputs from this README alone.
-```
+
+with incorrect credentials.
+
+**4. Confirm alerts**  
+
+- Go to **Security → Alerts** in Kibana.  
+- Filter by rule name and confirm that alert details match what is documented in each playbook.
+
+---
+
+## 🎯 Using This Repo in Interviews
+
+This repository is structured so I can quickly demonstrate and explain:
+
+- A concrete detection I built end‑to‑end (rule → validation → playbook).  
+- How I validate and tune detections (manual simulations, alert review, threshold tuning).  
+- How I think about vulnerability risk (KEV/EPSS/CVSS) and what I would automate next (e.g., joining to asset inventory or ticketing).  
+- How these artifacts relate to roles like **Detection Engineer**, **Vulnerability Management Engineer**, or **Threat Hunter / Purple Team**.
+
+Everything uses **public data + my own lab telemetry**—no proprietary information.
+
+---
+
+## 📝 License
+
+This project is released under the **MIT License**. See `LICENSE` for details.

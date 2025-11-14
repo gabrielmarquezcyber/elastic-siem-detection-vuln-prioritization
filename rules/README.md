@@ -1,28 +1,27 @@
-# Elastic Rule Exports (NDJSON) — Replacement Instructions
+# Elastic Rule Exports
 
-Purpose
--------
-These files are *placeholders* so your portfolio/capstone has a reproducible slot for rule exports.
-Replace each *.ndjson file with the real export from Kibana before submission.
+This folder contains **detections-as-code** that can be imported into any Elastic Security environment.
 
-Why keep them?
---------------
-- Reviewers/interviewers can import the rules in one click.
-- Shows good engineering hygiene (versioned detections-as-code).
+## Rules
 
-How to export from Kibana
--------------------------
-1) Kibana → Security → Alerts → Rules → Manage rules.
-2) Search for each rule by **Name**:
-   - "Suspicious PowerShell Flags (EQL)"
-   - "Failed Logon Burst (4625)"
-3) Check the boxes for the rules you want to export.
-4) Click **Export** → *Export selected rules* (creates a single `.ndjson`).
-5) Save the file(s) here, replacing the placeholders:
-   - `powershell_eql_rule_export.ndjson`
-   - `failed_logon_burst_4625_rule_export.ndjson`
+### `Suspicious_PowerShell_Flags_EQL.ndjson`
+- **Type:** EQL  
+- **ATT&CK:** T1059.001  
+- **Goal:** Detect obfuscated/headless PowerShell using flags like `-EncodedCommand`, `-NoProfile`, `-nop`  
+- **Playbook:** `artifacts/playbooks/playbook_suspicious_powershell_flags.md`
 
-Notes
------
-- NDJSON is line-delimited JSON. Do not edit by hand.
-- Keep filenames identical so cross-references in your playbooks/portfolio remain valid.
+### `failed_logon_burst.ndjson`
+- **Type:** Threshold KQL  
+- **ATT&CK:** T1110 (Brute Force)  
+- **Goal:** Detect Event ID 4625 bursts  
+- **Playbook:** `artifacts/playbooks/playbook_failed_logon_burst_4625.md`
+
+## How to Import
+
+1. Kibana → **Security → Rules → Import**
+2. Select `.ndjson` rule file
+3. Confirm settings (index patterns, schedule, severity)
+4. Enable the rule
+5. Validate using the associated playbook steps
+
+These exports show how detections can be version-controlled instead of living only in the UI.

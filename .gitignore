@@ -1,4 +1,5 @@
-﻿**/.venv/
+﻿# Python environments
+**/.venv/
 venv/
 .env
 __pycache__/
@@ -6,10 +7,18 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
+
+# OS / tooling noise
 .DS_Store
-dist/
-build/
 .ipynb_checkpoints/
 node_modules/
-# Personal / local-only materials
+
+# Build artifacts
+dist/
+build/
+
+# Local-only or large/lab assets
+elastic-agent-*/
+capstone/
 interview_materials/
+*.log

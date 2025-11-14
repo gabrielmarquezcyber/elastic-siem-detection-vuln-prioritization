@@ -1,83 +1,51 @@
-# CVE Prioritizer (KEV + EPSS + CVSS)
+# CVE Prioritization Engine (`cve_prioritizer.py`)
 
-**Purpose:** Pull recent CVEs from NVD, enrich with **EPSS** (exploit likelihood) and **CISA KEV** (known exploited), score them by practical risk, and output a CSV + a chart for quick triage.
+This script automates vulnerability risk scoring by combining:
 
----
+- **NVD CVE data** (CVSS base scores, last N days)
+- **CISA Known Exploited Vulnerabilities (KEV)** list
+- **EPSS** (Exploit Prediction Scoring System) probabilities
 
-## What it uses
-- **NVD API** (`/rest/json/cves/2.0`) — last N days of modified CVEs
-- **EPSS** daily feed — exploit probability per CVE
-- **CISA KEV** JSON — binary “exploited in the wild” flag
+The goal is to produce a **ranked list of CVEs** that help a Vulnerability Management or Detection Engineering team decide what to patch or monitor first.
 
----
+## What It Does
 
-## Scoring (balanced weights)
+1. Downloads EPSS feed  
+2. Downloads CISA KEV JSON  
+3. Calls NVD 2.0 API for CVEs modified within the lookback window  
+4. Normalizes into a single DataFrame  
+5. Applies a weighted scoring model:
+
 ```
 Priority = (KEV * 40) + (EPSS * 50) + (CVSS * 10)
 ```
-- **KEV (0/1)** → +40 (exploitation evidence gets a strong boost)
-- **EPSS (0–1)** → up to +50 (likelihood matters most)
-- **CVSS v3 (0–10)** → up to +100 (impact differentiator)
-
-This keeps KEV items near the top **without** flattening all KEV CVEs to the same score.
-
----
 
 ## Outputs
-- `C:\gm-interview-capstone\artifacts\figures\priority.csv`
-- `C:\gm-interview-capstone\artifacts\figures\priority_chart.png` (horizontal bar chart; longer bar = higher priority)
 
----
+- `artifacts/figures/priority.csv`
+- `artifacts/figures/priority_chart.png`
 
-## How to run (Windows + venv)
-```powershell
-cd C:\gm-interview-capstone\artifacts\scripts
-.\.venv\Scripts\Activate.ps1
+## How to Run
+
+```
+cd artifacts/scripts
+python -m venv .venv
+.\.venv\Scripts ctivate
+pip install -r requirements-extra.txt
 python .\cve_prioritizer.py
 ```
 
-**Accept:** script prints progress and saves CSV + PNG to `artifacts\figures\`.
+Set an optional `.env` at repo root:
 
----
-
-## Configuration
-- Lookback window: `LOOKBACK_DAYS` (default 30)
-- NVD page size: `PAGE_SIZE` (default 2000)
-- Output path: `C:\gm-interview-capstone\artifacts\figures`
-
----
-
-## NVD API key (secure, via .env)
-Create a `.env` at the repo root:
-```env
-# C:\gm-interview-capstone\.env
-NVD_API_KEY=your-key-here
 ```
-`.env` is **git-ignored**; include a public template:
-```text
-C:\gm-interview-capstone\.env.example
-NVD_API_KEY=
+NVD_API_KEY=your-api-key
 ```
 
----
+## Production Use
 
-## Dependencies
-Within the venv:
-```powershell
-pip install requests pandas matplotlib python-dotenv
-```
+In a real environment this script would join vulnerability intelligence with asset inventory to surface:
 
----
+- CVEs affecting internet-facing systems  
+- CVEs with critical business impact  
+- Alerts requiring new detections  
 
-## Troubleshooting
-- **Lots of identical scores / flat chart** → check the scoring line in the script; ensure the balanced weights above are in use.
-- **NVD 429/403 or 5xx** → ensure `NVD_API_KEY` is loaded; re-run (script has retries with backoff).
-- **Empty NVD results** → try a larger `LOOKBACK_DAYS` or re-run later (NVD occasionally rate-limits).
-- **Chart looks “reversed”** → bars are sorted descending; longer = higher priority.
-
----
-
-## Notes & future extensions
-- Add vendor/product filters for your environment (e.g., only Microsoft or only Linux).
-- Add age-decay or asset exposure to tailor risk to your org.
-- Push results into Elastic for dashboards and alerting.
