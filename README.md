@@ -33,7 +33,7 @@ This project demonstrates:
 ## Repository Structure
 
 ```text
-gm-interview-capstone/
+repo-root/
 ├─ README.md
 ├─ artifacts/
 │  ├─ playbooks/
@@ -345,3 +345,4 @@ LinkedIn:
 ```text
 https://linkedin.com/in/gabrielmarquezcyber
 ```
+
