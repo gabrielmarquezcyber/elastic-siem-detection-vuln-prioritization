@@ -1,219 +1,347 @@
-# 🧠 gm-interview-capstone  
-**Detection Engineering & Vulnerability Risk Portfolio (Elastic + Python)**  
+﻿# Elastic SIEM Detection Engineering and Vulnerability Risk Automation
 
-Author: **Gabriel Marquez**  
-GitHub: [github.com/gabrielmarquezcyber](https://github.com/gabrielmarquezcyber)  
-LinkedIn: [linkedin.com/in/gabrielmarquezcyber](https://linkedin.com/in/gabrielmarquezcyber)
+This repository contains a cybersecurity portfolio project focused on detection engineering, SIEM validation, analyst playbooks, and vulnerability risk prioritization.
 
-This repository showcases **end-to-end detection engineering** and **vulnerability risk automation** work, built and validated in a real Elastic lab.
+The project has two main parts:
 
-It is intentionally small and focused so an interviewer can quickly see **how I think, what I build, and how I validate it**—not just that I can follow a lab.
+1. Elastic Security detection engineering for Windows-based activity.
+2. Python-based CVE prioritization using EPSS, CISA KEV, and NVD CVSS data.
 
----
+The goal is to show a repeatable security operations workflow:
 
-## 📂 Repository Overview
+```text
+security signal
+-> detection rule
+-> validation evidence
+-> analyst playbook
+-> prioritization output
+-> documented security interpretation
+```
+
+## Project Scope
+
+This project demonstrates:
+
+- Elastic SIEM detection rule creation and validation.
+- Detection logic mapped to MITRE ATT&CK.
+- Analyst-facing playbooks for alert triage.
+- Evidence capture from Elastic Security and related telemetry views.
+- Python automation for vulnerability prioritization.
+- Risk scoring using exploit probability, known exploitation, and CVSS severity.
+- Visual reporting for vulnerability prioritization.
+
+## Repository Structure
 
 ```text
 gm-interview-capstone/
-├─ README.md                     ← this file
+├─ README.md
 ├─ artifacts/
-│  ├─ playbooks/                 ← human-readable detection runbooks
-│  │   ├─ playbook_powershell_eql.md
-│  │   ├─ playbook_powershell_eql.pdf
-│  │   ├─ playbook_failed_logon_burst_4625.md
-│  │   └─ playbook_failed_logon_burst_4625.pdf
-│  ├─ playbooks/Old/             ← earlier drafts, kept for history
-│  ├─ screenshots/               ← numbered evidence used in playbooks
+│  ├─ playbooks/
+│  │  ├─ powershell_flags_eql.md
+│  │  └─ failed_logon_burst_4625.md
+│  ├─ screenshots/
 │  ├─ docs/
-│  │   └─ CVE_Prioritization_Automation_OnePager.pdf
-│  ├─ figures/
-│  │   ├─ priority.csv
-│  │   └─ priority_chart.png
-│  └─ scripts/
-│      ├─ cve_prioritizer.py
-│      ├─ README_CVE_Prioritizer.md
-│      ├─ requirements-extra.txt
-│      └─ cve_prioritizer.old.txt
-├─ rules/                        ← Elastic rule exports (detections-as-code)
-│  ├─ Suspicious_PowerShell_Flags_EQL.ndjson
-│  ├─ failed_logon_burst.ndjson
+│  └─ figures/
+├─ artifacts/scripts/
+│  ├─ cve_prioritizer.py
 │  └─ README.md
-└─ .env.example                  ← sample config for NVD API key
+├─ artifacts/elastic/rules/
+│  ├─ powershell_eql_rule_export.ndjson
+│  ├─ failed_logon_4625_rule_export.ndjson
+│  └─ README.md
+└─ LICENSE
 ```
 
-**Primary artifacts:**
+## Environment and Tools
 
-- Two validated Elastic detections + playbooks  
-- A CVE risk prioritization engine (EPSS + CISA KEV + NVD)  
-- Evidence (screenshots, charts, one-pagers) showing how these would run in a real environment  
+| Area | Tools / Data |
+|---|---|
+| SIEM | Elastic Security |
+| Endpoint / log data | Windows and System integrations |
+| Detection content | Elastic rules exported as NDJSON |
+| Detection validation | Elastic Discover, Security alerts, and screenshots |
+| Automation | Python 3.11+ |
+| Python libraries | `requests`, `pandas`, `matplotlib`, `python-dotenv` |
+| Vulnerability intelligence | EPSS, CISA KEV, NVD CVSS |
 
----
+## Detection Engineering Work
 
-## 🚨 Detection Engineering (Elastic)
+### Detection 1: Suspicious PowerShell Flags
 
-### 1️⃣ Suspicious PowerShell Flags (EQL) — MITRE ATT&CK T1059.001
+| Field | Detail |
+|---|---|
+| Detection | Suspicious PowerShell Flags |
+| MITRE ATT&CK | T1059.001 - PowerShell |
+| Signal | PowerShell processes using suspicious flags such as `-enc`, `-nop`, `-NoProfile`, or `-w hidden` |
+| Risk | These flags are commonly associated with encoded commands, reduced logging visibility, script obfuscation, and living-off-the-land execution patterns |
+| Rule export | `artifacts/elastic/rules/powershell_eql_rule_export.ndjson` |
+| Playbook | `artifacts/playbooks/powershell_flags_eql.md` |
+| Evidence | `artifacts/screenshots/` |
 
-**Goal:** Detect potentially obfuscated or headless PowerShell commonly used in attacks (e.g., `-EncodedCommand`, `-nop`, `-NoProfile`).  
+Security interpretation:
 
-**Data sources**  
-- Elastic Defend endpoint telemetry  
-- Indices: `logs-*`, `endpoint.events.*`  
+Suspicious PowerShell flag usage does not automatically prove compromise. It is a detection signal that should trigger triage. The analyst should review process ancestry, command line arguments, user context, host context, and surrounding endpoint activity before escalating.
 
-**Core EQL logic (simplified):**
+### Detection 2: Failed Logon Burst
 
-```eql
-process
-  where process.name : ("powershell.exe", "pwsh.exe")
-    and (
-      process.command_line : "*-enc*" or
-      process.command_line : "*-EncodedCommand*" or
-      process.command_line : "*-NoProfile*" or
-      process.command_line : "*-nop*"
-    )
+| Field | Detail |
+|---|---|
+| Detection | Failed Logon Burst |
+| Event ID | Windows Security Event ID 4625 |
+| MITRE ATT&CK | T1110 - Brute Force |
+| Signal | Multiple failed logon attempts within a short time window |
+| Risk | May indicate password spraying, brute-force attempts, misconfigured services, stale credentials, or unauthorized access attempts |
+| Rule export | `artifacts/elastic/rules/failed_logon_4625_rule_export.ndjson` |
+| Playbook | `artifacts/playbooks/failed_logon_burst_4625.md` |
+| Evidence | `artifacts/screenshots/` |
+
+Security interpretation:
+
+A burst of failed logons requires context. The analyst should review source host, target account, logon type, time window, failure reason, account criticality, and whether successful authentication followed the failures.
+
+## Analyst Playbooks
+
+The playbooks are written for alert triage and explain:
+
+- Detection purpose.
+- Relevant data sources.
+- Triage questions.
+- Fields to review.
+- False-positive considerations.
+- Escalation indicators.
+- Suggested analyst response.
+
+Playbooks:
+
+```text
+artifacts/playbooks/powershell_flags_eql.md
+artifacts/playbooks/failed_logon_burst_4625.md
 ```
 
-**Artifacts**  
+These playbooks are intended to connect detection logic with analyst decision-making.
 
-- Playbook: `artifacts/playbooks/playbook_powershell_eql.md`  
-- Rule export: `rules/Suspicious_PowerShell_Flags_EQL.ndjson`  
-- Evidence screenshots: `artifacts/screenshots/` (14–18 in my local numbering)  
+## Elastic Rule Exports
 
-**What it demonstrates**  
+Detection rules are exported as NDJSON for reproducibility.
 
-- Practical, ATT&CK-mapped detection for a very common attacker technique  
-- End-to-end validation: manual simulations, Discover queries, and alert verification  
-- A clear triage/response flow documented in the playbook  
+Rule exports:
 
----
-
-### 2️⃣ Failed Logon Burst (Windows Event ID 4625) — MITRE ATT&CK T1110 (Brute Force)
-
-**Goal:** Detect bursts of failed Windows logons that may indicate password spraying or brute force.  
-
-**Data sources**  
-
-- Windows Security logs via Elastic System integration  
-- Data stream: `system.security` (indices `logs-*`)  
-
-**Base KQL filter:**
-
-```kql
-data_stream.dataset: "system.security"
-and winlog.event_id: 4625
+```text
+artifacts/elastic/rules/powershell_eql_rule_export.ndjson
+artifacts/elastic/rules/failed_logon_4625_rule_export.ndjson
 ```
 
-The rule is implemented as a **threshold rule** (for example: ≥ 10 events per `user.name` or `host.name` in 10 minutes).
+These files can be imported into Elastic Security through:
 
-**Artifacts**  
+```text
+Kibana -> Security -> Rules -> Manage rules -> Import
+```
 
-- Playbook: `artifacts/playbooks/playbook_failed_logon_burst_4625.md`  
-- Rule export: `rules/failed_logon_burst.ndjson`  
-- Evidence screenshots: `artifacts/screenshots/` (19–22 in my local numbering)  
+After import, rule behavior should be validated against the expected data streams and alert evidence.
 
-**What it demonstrates**  
+## Reproducing the Elastic Detection Workflow
 
-- Threshold-based brute force detection mapped to ATT&CK T1110  
-- Telemetry enablement and validation steps in Elastic  
-- Tuning and response considerations for noisy environments  
+### 1. Import the detection rules
 
----
+Import the `.ndjson` rule files from:
 
-## 📊 CVE Prioritization Automation (EPSS + KEV + CVSS)
+```text
+artifacts/elastic/rules/
+```
 
-**Script:** `artifacts/scripts/cve_prioritizer.py`  
-**Docs:** `artifacts/scripts/README_CVE_Prioritizer.md`, `artifacts/docs/CVE_Prioritization_Automation_OnePager.pdf`  
+### 2. Confirm required integrations and data streams
 
-**Purpose:**  
-Ingest public vulnerability intelligence (NVD, CISA KEV, EPSS), normalize it, and produce a ranked list of CVEs suitable for vulnerability management and detection engineering.
+Validate that the expected Windows and System integrations are active.
 
-**Data sources**  
+Relevant data streams may include:
 
-- EPSS: `https://epss.cyentia.com/epss_scores-current.csv.gz`  
-- CISA KEV: `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json`  
-- NVD CVEs: NVD 2.0 API for a configurable lookback window (e.g., last 30 days)  
+```text
+windows.powershell
+windows.powershell_operational
+system.security
+```
 
-**Scoring model (example):**
+### 3. Generate or locate matching telemetry
+
+For Suspicious PowerShell Flags:
+
+```text
+Run PowerShell with suspicious command-line flags in a controlled lab environment.
+```
+
+For Failed Logon Burst:
+
+```text
+Generate repeated failed authentication attempts in a controlled lab environment.
+```
+
+### 4. Confirm detection behavior
+
+Review:
+
+```text
+Elastic Discover
+Security -> Alerts
+Rule details
+Event fields
+Related process or authentication context
+```
+
+### 5. Capture evidence
+
+Screenshots and validation artifacts are stored in:
+
+```text
+artifacts/screenshots/
+```
+
+## Vulnerability Risk Prioritization Engine
+
+The repository includes a Python script for ranking CVEs using public vulnerability intelligence.
+
+Script:
+
+```text
+artifacts/scripts/cve_prioritizer.py
+```
+
+Purpose:
+
+```text
+Merge EPSS, CISA KEV, and NVD CVSS into a practical prioritization model for vulnerability management.
+```
+
+Outputs:
+
+```text
+artifacts/figures/priority.csv
+artifacts/figures/priority_chart.png
+```
+
+## Prioritization Model
+
+The prioritization model uses three inputs:
+
+| Input | Meaning |
+|---|---|
+| CISA KEV | Whether the vulnerability is known to be exploited in the wild |
+| EPSS | Probability of exploitation |
+| CVSS | Severity score from NVD data |
+
+Scoring model:
 
 ```python
 df["Priority"] = (df["KEV"] * 40) + (df["EPSS"] * 50) + (df["CVSS"] * 10)
 ```
 
-**Outputs**  
+Design rationale:
 
-- Ranked CSV: `artifacts/figures/priority.csv`  
-- Chart: `artifacts/figures/priority_chart.png` (top KEV vs non‑KEV CVEs)  
+- KEV increases priority because known exploitation changes remediation urgency.
+- EPSS adds probability-based exploit likelihood.
+- CVSS preserves severity context.
+- The combined score supports ranked remediation decisions rather than relying on severity alone.
 
-**Local usage (Windows example):**
+The model is intentionally simple and explainable. It is not a replacement for business context, asset criticality, exposure, compensating controls, or service ownership.
+
+## Running the CVE Prioritization Script
+
+From the repository:
 
 ```powershell
 cd artifacts\scripts
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements-extra.txt
+pip install requests pandas matplotlib python-dotenv
 python .\cve_prioritizer.py
 ```
 
-You can optionally set an `NVD_API_KEY` in a `.env` file at the repo root to avoid rate limits.
+Outputs are written to:
 
-In a real environment, this script would be integrated with an **asset inventory** so that prioritization focuses on CVEs affecting critical systems, not just “highest scores.”
-
----
-
-## 🧪 Reproducing the Elastic Detections
-
-**1. Import rules**  
-
-1. In Kibana, go to **Security → Rules → Import**.  
-2. Select the appropriate `.ndjson` file from the `rules/` folder.  
-3. Review index patterns, schedule, and severity, then enable the rule.
-
-**2. Validate telemetry**  
-
-- Confirm Windows/System and Elastic Defend integrations are active.  
-- In **Discover**, validate that data is present:  
-  - PowerShell: `process.name : "powershell.exe"` with command‑line flags.  
-  - 4625 events: `data_stream.dataset:"system.security" AND winlog.event_id:4625`.
-
-**3. Generate test events**  
-
-_PowerShell (encoded/headless examples):_
-
-```powershell
-powershell.exe -NoProfile -EncodedCommand VwByAGkAdABlAC0ATwB1AHQAcAB1AHQAIAB0AGUAcwB0AA==
-powershell.exe -NoProfile -nop -Command "Write-Output test"
+```text
+artifacts\figures\
 ```
 
-_Failed logons:_
+## Environment Variables
 
-- Intentionally log on with a wrong password at the Windows logon screen.  
-- Or use:
+Create a `.env` file at the repository root for local use:
 
-```powershell
-runas.exe /user:.\WrongUser cmd
+```bash
+NVD_API_KEY=your-api-key-here
 ```
 
-with incorrect credentials.
+`.env` should not be committed.
 
-**4. Confirm alerts**  
+A safe `.env.example` file may be included with placeholder values only.
 
-- Go to **Security → Alerts** in Kibana.  
-- Filter by rule name and confirm that alert details match what is documented in each playbook.
+## Evidence and Reporting Artifacts
 
----
+This repository includes several types of evidence:
 
-## 🎯 Using This Repo in Interviews
+| Artifact Type | Purpose |
+|---|---|
+| Detection rule exports | Allow reproducible Elastic rule import |
+| Playbooks | Explain analyst triage workflow |
+| Screenshots | Provide validation evidence |
+| CVE prioritization script | Automates vulnerability ranking |
+| Ranked CSV output | Shows prioritized vulnerability results |
+| Priority chart | Visualizes prioritization output |
+| Documentation | Explains methodology, assumptions, and limitations |
 
-This repository is structured so I can quickly demonstrate and explain:
+## What This Project Demonstrates
 
-- A concrete detection I built end‑to‑end (rule → validation → playbook).  
-- How I validate and tune detections (manual simulations, alert review, threshold tuning).  
-- How I think about vulnerability risk (KEV/EPSS/CVSS) and what I would automate next (e.g., joining to asset inventory or ticketing).  
-- How these artifacts relate to roles like **Detection Engineer**, **Vulnerability Management Engineer**, or **Threat Hunter / Purple Team**.
+This project demonstrates practical ability to:
 
-Everything uses **public data + my own lab telemetry**—no proprietary information.
+- Build and validate SIEM detections.
+- Map detection logic to MITRE ATT&CK techniques.
+- Export and document Elastic Security rules.
+- Write analyst-facing playbooks.
+- Capture evidence that supports detection validation.
+- Automate vulnerability prioritization with Python.
+- Combine exploit likelihood, known exploitation, and severity into a ranked output.
+- Communicate security findings in a way that supports analyst workflows.
 
----
+## Limitations
 
-## 📝 License
+This project is a controlled portfolio lab.
 
-This project is released under the **MIT License**. See `LICENSE` for details.
+It does not claim to represent a production SOC environment.
+
+Limitations include:
+
+- Detection examples are limited to the available lab telemetry.
+- Rule performance was validated in a controlled environment.
+- CVE prioritization does not include asset criticality, internet exposure, compensating controls, business ownership, or exploit-chain context.
+- The prioritization model is explainable but intentionally simple.
+- Screenshots and outputs are evidence artifacts, not proof of full enterprise coverage.
+
+## Security Operations Value
+
+The project connects three practical security operations skills:
+
+```text
+Detection engineering
++ analyst triage
++ vulnerability prioritization
+```
+
+This matters because security teams need more than alerts. They need validated detections, clear triage steps, and ranked remediation priorities.
+
+## License
+
+This project is released under the MIT License.
+
+## Author
+
+Gabriel Marquez
+
+GitHub:
+
+```text
+https://github.com/gabrielmarquezcyber
+```
+
+LinkedIn:
+
+```text
+https://linkedin.com/in/gabrielmarquezcyber
+```
